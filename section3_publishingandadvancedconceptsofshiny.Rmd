@@ -1,0 +1,299 @@
+---
+title: 'Section3: Publishing and Advanced Concepts of Shiny'
+author: "Robet Phavong"
+date: "2024-09-27"
+output: html_document
+---
+
+
+# Load necessary libraries
+```{r}
+library(shiny)
+library(shinythemes)
+library(ggplot2)
+library(DT)
+```
+
+
+# Publishing and Sharing
+## End user does not need R skills to use a Shiny app
+## The coding part is made by the app developer
+## Interactively through widgets
+## R, Shiny and all required packages need to be installed on the server
+## Setup your own server or use RStudio's server (shinyapps.io)
+## Testing apps locally:
+### Unsaved script: mark the whole app and run the code - ad hoc testing
+### Saved script: no highlighting is needed, just run the code
+#### Viewer pane, new window, Web browser (external)
+### Works even offline!
+
+## Easiest way: Shinyapps.io
+### RStudio's server service
+### Upload your code and share
+### Different plans are available: free plan or monthly subscription
+### R, Shiny and other add-ons are already installed
+
+## Alternatively, setup your own server
+### It needs to run R, Shiny and all required packages
+### Linux based server
+### Free server software from RStudio: RServer Basic
+### Pro version comes with a price
+### Setup and maintenance takes effort and requires a skillsed programmer
+
+## Script naming convention
+### Proper script naming convention is required if app is deployed onto a server
+## Double script - old method
+### server.R - server part of the code
+### ui-R - user interface part of the code
+### Appropriate for long scripts
+
+## Mono script - common method
+### app.R - contains both parts of the code
+
+## R Server recognizes scripts only as app.R or server.R and ui.R
+## Each component of the app must be in one folder
+## Local scripts can be named whatever you want
+
+
+# Shinyapps.io
+## Option 1 (hard way): Own server - Linux server with Shiny Server software OR Linux server with Shiny Server Pro (paid with authentication)
+
+## Option 2: Shinyapps.io - service provided by RStudio. Host and share your apps
+
+# Preparing shinyapps.io account
+## 1. Create Shinyapps.io account using the shinyapps.io website
+## 2. install.packages('rsconnect')
+## 3. Authorize account: copy the account token and secret
+```{r}
+rsconnect::setAccountInfo(name='rphavong',
+			  token='1FE2E12E29F096FF62D2FC812D021C8B',
+			  secret='<SECRET>')
+```
+
+
+## 4. Deploy your application to shinyapps.io
+```{r}
+library(rsconnect)
+    rsconnect::deployApp('path/to/your/app')
+```
+
+
+# Integrating Tables with DT
+## Tables can be a part of or the whole Shiny app
+## Well implemented in Shiny
+## Shiny function: renderDataTable() -> sets up a data table
+## DT package: renderDataTable()
+### Make sure you use the right function: DT::renderDataTable()
+### DT generates interactive, visually appealing data tables
+### Install the package DT once and activate in each session
+### DT is a rather new package (therefore not much documentation)
+### DT integrates JavaScript library DataTables into R
+## Documentation: JavaScript's DataTables library: datatables.net or DT packageL rstudio.github.io/dt
+```{r}
+## Basic approach
+server <- function(input, output, session) {
+  
+  output$tableDT <- DT::renderDataTable(diamonds[1:1000,],
+                                        options = list(paging=F),
+                                        rownames=F,
+                                        filter = "top")
+}
+
+ui <- fluidPage(
+  DT::dataTableOutput("tableDT")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+```{r}
+## Adding features to the table within the output section
+
+server <- function(input, output, session) {
+  
+  output$tableDT <- DT::renderDataTable(datatable(diamonds[1:1000,],
+                                                  options = list(paging=F),
+                                                  rownames=F,
+                                                  filter = "top") %>%
+                                          formatCurrency("price", "$") %>%
+                                          formatStyle("price", color = "green") %>%
+                                          formatStyle("cut",
+                                                      transform = "rotateX(20deg) rotateY(5deg) rotateZ(5deg)",
+                                                      backgroundColor = styleEqual(
+                                                        unique(diamonds$cut), c("salmon", "lightblue", "grey", "lightgreen", "lightpink"))))
+}
+
+ui <- fluidPage(
+  DT::dataTableOutput("tableDT")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Add Brush and Click Selection tools to your App
+## User Input
+### UI input widgets
+### 1. Data input through input widget (user end)
+### 2. Calculations (server end)
+### 3. Calculated results/Output (user end)
+
+## Alternative types of user input:
+### Click, double click, hover, brush movement, etc
+### They work with R base plots and ggplot2 plots
+### Our Example: 
+#### Graph sensitive to a brush maneuver 
+#### User action click
+```{r}
+## Advanced App - Brush Feature
+
+server <- function(input, output, session) {
+  
+  # Include which R packages need to be loaded 
+  library(ggplot2) # for the diamonds dataset, and ggplot features
+  library(DT) # for the dataTableOutput function
+  
+  # Include which type of plot to use and what to include in the x and y axis
+  output$plot <- renderPlot({
+    ggplot(diamonds, aes(price, carat)) + geom_point()
+  })
+  
+  # Make graph reactive by user by creating a function
+  diam <- reactive({
+    user_brush <- input$user_brush
+    sel <- brushedPoints(diamonds, user_brush) # note here we are including our dataframe of interest 'diamonds' and the user_brush to include by user
+    return(sel)
+  })
+  
+  output$table <- DT::renderDataTable(DT::datatable(diam()))
+}
+
+ui <- fluidPage(
+  h1("Using the brush feature to select specific observations"),
+  plotOutput("plot", brush = "user_brush"),
+  dataTableOutput("table")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+## Similar to code above, but suing the click feature
+```{r}
+## Advanced App - Click Feature
+
+server <- function(input, output, session) {
+  
+  # Include which R packages need to be loaded 
+  library(ggplot2) # for the diamonds dataset, and ggplot features
+  library(DT) # for the dataTableOutput function
+  
+  # Include which type of plot to use and what to include in the x and y axis
+  output$plot <- renderPlot({
+    ggplot(diamonds, aes(price, carat)) + geom_point()
+  })
+  
+  # Make graph reactive by user by creating a function
+  diam <- reactive({
+    
+    user_click <- input$user_click
+    sel <- nearPoints(diamonds, user_click, threshold = 10, maxpoints = 5) # note here we are including our dataframe of interest 'diamonds' and the user_click to include by user
+    return(sel)
+  })
+  
+  output$table <- DT::renderDataTable(DT::datatable(diam()))
+}
+
+ui <- fluidPage(
+  h1("Using the click feature to select specific observations"),
+  plotOutput("plot", click = "user_click"),
+  dataTableOutput("table")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Downloadable Tables
+```{r}
+## Advanced Plot with CSV export of data set
+
+server <- function(input, output, session) {
+  
+  # Include which R packages need to be loaded 
+  library(ggplot2) # for the diamonds dataset, and ggplot features
+  library(DT) # for the dataTableOutput function
+  
+  # Include which type of plot to use and what to include in the x and y axis
+  output$plot <- renderPlot({
+    ggplot(diamonds, aes(price, carat)) + geom_point()
+  })
+  
+  # Make graph reactive by user by creating a function
+  diam <- reactive({
+    user_brush <- input$user_brush
+    sel <- brushedPoints(diamonds, user_brush) # note here we are including our dataframe of interest 'diamonds' and the user_brush to include by user
+    return(sel)
+  })
+  
+  output$table <- DT::renderDataTable(DT::datatable(diam()))
+  
+  # Include data to be easily accessible to user to be downloadable as a CSV file
+  output$mydownload <- downloadHandler(
+    filename = "plotextract.csv",
+    content = function(file) {
+      write.csv(diam(), file)})
+}
+
+ui <- fluidPage(
+  h1("Using the brush feature to select specific observations"),
+  plotOutput("plot", brush = "user_brush"),
+  dataTableOutput("table"), 
+  downloadButton(outputId = "mydownload", label = "Download Table") # Include a download button/tab for user to easily click to download data in CSV format
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Integrating all Sorts of Media
+## Media integration
+### Video, audio, image, iframe, text, PDF
+### Most of them can be integrated via tags
+#### ExceptionL text has its own function - includeText()
+#### Tags: tags$video, tags$img, tags$iframe, tags$audio
+#### Local data
+#### Framed data (online)
+### Shiny apps can be integrated into websites via iframes
+```{r}
+library(shiny)
+
+server <- function(input, output) {}
+
+ui <- navbarPage("Integration of different media types",
+                 
+                 tabPanel("Image sourced localled", 
+                          tags$img(src = "logo.png", width = "100px", height = "100px")),
+                 
+                 tabPanel("Video sourced locally",
+                          tags$video(src = "comist.mp4", type = "video/mp4", controls = T,
+                                     width = "900px", height = "800px")),
+                 
+                 tabPanel("Pdf sourced online, Iframe",
+                          tags$iframe(style="height:600px; width:100%; scrolling=yes",
+                                      src="https://cran.r-project.org/web/packages/shiny/shiny.pdf")),
+                 
+                 # For this tab you'll need to create a txt file using the indicated file name as templated below "mytxt.txt"
+                 # tabPanel("Text as .txt",
+                 #          includeText("mytxt.txt"))
+
+)
+
+shinyApp(ui = ui, server = server)
+
+```
+
+
+# Tools for your own Apps
+## Can look up Shiny by RStudio Gallery for all R scripts to use the featured visualizations already created. Can use the code to then modify at your own discretion. 
