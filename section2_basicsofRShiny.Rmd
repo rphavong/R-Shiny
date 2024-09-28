@@ -1,0 +1,269 @@
+---
+title: 'Section2: The Basics of R Shiny'
+author: "Robet Phavong"
+date: "2024-09-27"
+output: html_document
+---
+
+
+# Load necessary packages
+```{r}
+library(shiny)
+```
+
+
+# Flow of how R Shiny works 
+## 1. User input at the User Interface (UI)
+## 2. Transfer function e.g "reactive()"
+## 3. Calculation at the server
+## 4. Result e.g. "renderPlot()" and "plotOutput()"
+
+## UI setup and layout
+### Page types e.g. "basicPage", "fluidPage"
+### Multi-page app with tabs
+### Style your app without CSS or HTML (using package: "shinythemes") using R code only
+### Object formatting with HTML tags: hearders, font type, spacing, media integration, etc
+### Core: Programming the UI and Communication between server and UI
+
+
+# Integrating an Input Widget - The User Interface Side
+```{r}
+server <- function(input, output, session) {}
+
+ui <- basicPage(
+  h1("Using textInput and checkboxInput"), # h1 is the highest level of header
+  textInput("mystring", "Write here"), # Input widget
+  checkboxInput("mycheckbox", "Factor Y") # using a checkbox for user to mark if needed
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Connecting an Input Widget with the Server
+## User Interface: input widgets make the app interactive
+## The server doesn't react if the input is not integrated
+## Information from the user interface needs to be integrated in the 'server' code line
+## Functions to choose from: 
+### observe(): reacts to reactive values, use it for updates to textboxes/pulldowns, etc. No newly created data is returned. observeEvent() = specifies events that trigger reactions
+### reactive(): whole family of Shiny functions. Displays output at the user interface. renderPlot() - plotOutput; renderText() - textOutput. 
+### render(): like an R function, required user interaction; reactives are stored as type, closure, objects(); use the object with () in the server code. 
+```{r}
+# Making the app reactive
+
+server <- function(input, output, session) {
+  observe({
+    addtext <- paste("your initial input:", input$mystring)
+    updateTextInput(session, "mystring2", value = addtext)
+  })
+}
+
+ui <- basicPage(
+  h1("Using Observe"),
+  textInput("mystring", "Write here"),
+  textInput("mystring2", "Full App Output")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Using Functions Render and Reactive - Reactivity
+
+## render(): creates new features in the app. Gives visual results renderPlot() - plotOutput; renderText() - textOutput. Workflow: data input via input widget in the user interface. Transferred to the server. Calculations are performed in the server. Calculations are performed in the server. Objects are displayed by plotOutput() or textOutput() in the user interface.
+
+
+```{r}
+## Using reactive and render in one app
+
+server <- function(input, output, session) {
+  
+  data <- reactive({
+  rnorm(50) * input$myslider # rnorm(50) will use 50 random numbers to be used in the slider
+})
+  
+  output$plot <- renderPlot({
+    plot(data(), col = "red", pch = 21, bty = "n") # renderPlot will allow you to use R base plots and ggplot2 plots, here is the backbone of R Shiny graphics!!!
+  })
+}
+
+ui <- basicPage(
+  h1("Using Reactive"),
+  sliderInput(inputId = "myslider",
+              label = "Slider1",
+              value = 1, min = 1, max = 20),
+  plotOutput("plot")
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+
+# Planning Your App Layout
+## ShinyApp: analytics webpage. A typical app consists of a graph or even a dashboard. The user can interact with the data via input widgets (e.g. sliders, buttons, etc) and extract information. The app should be visually appealingand intuitive to enhance user experience -> layouts. The app can be tailored, but highly finished pre-set layouts are not the strongpoint of Shiny. The code is compiled into HTML, CSS and JavaScript -> no coding skills needed. Framework: Twitter Bootstrap. 
+
+## BasicPage: Empty body, program the layout yourself
+## FluidPage: Standard page type. The layout consists of rows and columns.
+#### rows: elements on the same line.
+#### columns: horizontal space between the elements
+#### 12 units?
+### FluidPage adapts to the browser (real time)
+### Example: fluidPage with sidebarLayout
+```{r}
+## Layout - basic sidebar layout
+
+library(shiny)
+
+server <- function(input, output, session) {}
+
+ui <- fluidPage(
+  
+  sidebarLayout(
+    
+    sidebarPanel(
+      "mysidebar"
+    ),
+    
+    mainPanel(
+      "my mainpanel"
+    )
+  )
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+
+# Multi Page Apps - Using Tabsets
+```{r}
+## Layout - tabsets
+
+server <- function(input, output, session) {}
+
+ui <- fluidPage(
+  titlePanel("using Tabsets"), # out title
+  
+  sidebarLayout(
+   
+     sidebarPanel(
+      sliderInput(inputId = "s1",
+                  label = "My slider",
+                  value = 1, min = 1, max = 20)
+    ),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Tab1", "First Tab"),
+        tabPanel("Tab2", "Second Tab"),
+        tabPanel("Tab3", "Third Tab")
+      )
+    )
+  )
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# HTML Tags in Shiny
+## Shiny translates R code to web languages (HTML, CSS, JavaScript)
+## Custom formatting of built-in layuts is possible via tags
+### HTML tags e.g. h1, b, code, br...
+### Iframes to embed web content
+### Audio tags
+### Font types
+```{r}
+## This lists all the HTML tags that can be used using Shiny
+### Examples of Tags with direct function from list outputted:
+#### a() = (anchor) injects a hyperlink
+#### br() = line break
+#### code() = computer code as text
+#### div() = section division
+#### h1(), h2(), etc = headings
+#### hr() = horizontal line
+#### img() = injects an image
+#### p() = paragraph
+#### pre() = pre-formatted text
+#### span() = group of line elements
+#### strong() = bold text
+names(tags)
+
+## Using HTML Tags
+
+server <- function(input, output, session) {}
+
+ui <- fluidPage(
+  
+  titlePanel(strong("This is the STRONG tag on the Title")),
+  
+  sidebarLayout(
+    
+    sidebarPanel(
+      withTags( # this allows to not have to use the '$' to include with tags below
+        div(
+          b("bold text: here you see a line break, a horizontal line and "),
+          br(),
+          hr(),
+          code("plot(lynx)")
+        ))),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Weblinks with direct tag a", a(href = "www.r-tutorials.com", "r-tutorials")),
+        tabPanel(tags$b("Using b for bold text"), tags$b("a bold text")),
+        tabPanel("Citations with the blockquote tag", tags$blockquote("R is Great", cite = "R Programmer"))
+      )
+    )
+  ))
+  
+shinyApp(ui= ui, server = server)
+```
+
+
+# Style Your app with shinythemes
+## Pre-set themes: library(shinythemes)
+## Custom themes are made in CSS
+### import CSS file into the script using includeCSS()
+### Alternatively, you can install shinyjs package -> inlineCSS()
+### Or, you can use CSS in the head tag
+```{r}
+## Changing themes
+
+server <- function(input, output, session) {}
+
+library(shinythemes) # adding the shinythemes package
+
+ui <- fluidPage(themeSelector(), # displaying different themes, replace this line when publishing with theme = shinytheme("darkly")
+                
+                titlePanel(strong("This is the STRONG tag on the Title")), # using strong as a direct tag
+              
+                sidebarLayout(
+                  
+                  sidebarPanel(
+                    withTags(
+                      div(
+                        b("bold text: here you see a line break, a horizontal line and some code"),
+                        br(),
+                        hr(),
+                        code("plot(lynx")
+                        ))),
+                  
+                  mainPanel(
+                    tabsetPanel(
+                      tabPanel("Weblinks with direct tag a", a(href="www.r-tutorials.com", "r-tutorials")),
+                      tabPanel(tags$b("Using b for bold text"), tags$b("a bold text")),
+                      tabPanel("Citations with the blockquote tag", tags$blockquote("R is Great", cite = "R Programmer"))
+                      )
+                    )
+                  ))
+
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
+
+
