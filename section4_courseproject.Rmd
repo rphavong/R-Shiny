@@ -1,0 +1,254 @@
+---
+title: "Section 4: Course Project - Hands-on Experience!"
+author: "Robet Phavong"
+date: "2024-09-27"
+output: html_document
+---
+
+
+# Load necessary libraries
+```{r}
+library(shiny)
+library(shinythemes)
+library(ggplot2)
+library(DT)
+```
+
+
+# Take a Look at the Project Data
+## Background on data
+### Approx, 50 observations = mining stocks
+### MarketCap = market capitalization in million
+### Symbol = abbreviation for comp. name (randomized)
+### G1 = number of most valuable plots
+### G2 = number of intermediate plots
+### G3 = numver of least valuable plots
+### Preferences of investors might differ
+### Mining stock evaluation:
+#### the investor specifies the importance of each grade(weight)
+#### each grade is multiplied by its weight
+#### figures are added together to get a score
+#### evaluation is based on the scores
+```{r}
+# Load the data to be used for this project
+mydata <- read.csv("course_proj_data.csv", header = T, sep = ";") 
+```
+
+
+# Project Description - Your Homework
+### Data structure: sliders -> plot with brush -> table
+### Three types of mining plots: 
+#### Grade 1: most valuable
+#### Grade 2: intermediate plots
+#### Grade 3: least valuable
+
+
+# Project Solution - User Interface
+```{r}
+server <- function(input, output, session) {}
+
+ui <- navbarPage(theme = shinytheme("sandstone"), title = h3("The Mining Stock Scale"),
+                 
+                 tabPanel(("Adjust your Mining Stocks"),
+                          wellPanel(
+                            sliderInput(inputId = "w1",
+                                        label = "Weight on Grade 1",
+                                        value = 7, min = 0, max = 20),
+                            sliderInput(inputId = "w2",
+                                        label = "Weight on Grade 2",
+                                        value = 2, min = 0, max = 20),
+                            sliderInput(inputId = "w3",
+                                        label = "Weight on Grade 3",
+                                        value = 0.6, min = 0, max = 6, step = 0.2)
+                            ),
+                          plotOutput("scat", brush = "user_brush"),
+                          DT::dataTableOutput("table"),
+                          downloadButton(outputId = "mydownload", label = "Download Table")
+                          ),
+                 tabPanel("Documentation",
+                          h4("Video documentation - Embedded from Youtube"),
+                          tags$iframe(src="https://www.youtube.com/embed/vySGuusQI3Y"),
+                          style="height:900px; width:900px"),
+                 
+                 tabPanel("Data Table with the underlying data",
+                          DT::dataTableOutput("tableDT"))
+                 
+                 )
+
+shinyApp(ui = ui, server = server)
+```
+
+
+# Project Solution - Server
+```{r}
+attach(mydata)
+
+# Server section
+server <- function(input, output, session) {
+  
+  ## Table for the Data table tab
+  output$tableDT <- DT::renderDataTable(DT::datatable(mydata) %>%
+                                          formatCurrency("MarketCap.in.M", "$", digits = 0) %>%
+                                          formatStyle("Symbol", color = "grey") %>%
+                                          formatStyle(c("G3", "G2", "G1"),
+                                                      backgroundColor = "lightblue"))
+  
+  # Working on how the data will be calculated for the plot
+  weighted.mydata = reactive(
+    cbind(mydata, 
+          points = input$w1 * `G1` + input$w2 * `G2` + input$w3 * `G3`) # be careful, use back quotes "``" and not single quots "''"
+  )
+  
+  ## Working on the Plot
+  output$scat = renderPlot({
+    ggplot(weighted.mydata(), aes(points, MarketCap.in.M)) +
+      geom_point() + geom_smooth(method = "lm") + 
+      xlab("Your Calculated Score") + ylab("Market Capitalization in Million USD")
+  })
+  
+  # What type of format to select for the data points of interest
+  mydata.new = reactive({
+    
+    user_brush <- input$user_brush
+    mysel <- brushedPoints(weighted.mydata(), user_brush)
+    return(mysel)
+    
+  })
+  
+  # This table will be output when the user brushes onto a section of interest
+  output$table = DT::renderDataTable(DT::datatable(mydata.new()))
+  
+  # Include a download tab of the data
+  output$mydownload = downloadHandler(
+    filename = "selected_miners.csv",
+    content = function(file) {
+      write.csv(mydata.new(), file)})
+}
+  
+
+# User Interface section
+ui <- navbarPage(theme = shinytheme("sandstone"), title = h3("The Mining Stock Scale"),
+                 
+                 tabPanel(
+                   ("Adjust your Mining Stocks"),
+                   wellPanel(
+                     sliderInput(inputId = "w1",
+                                 label = "Weight on Grade 1",
+                                 value = 7, min = 0, max = 20),
+                     sliderInput(inputId = "w2",
+                                 label = "Weight on Grade 2",
+                                 value = 2, min = 0, max = 20),
+                     sliderInput(inputId = "w3",
+                                 label = "Weight on Grade 3",
+                                 value = 0.6, min = 0, max = 6, step = 0.2)
+                     ),
+                   plotOutput("scat", brush = "user_brush"),
+                   DT::dataTableOutput("table"),
+                   downloadButton(outputId = "mydownload", label = "Download Table")
+                   ),
+                 tabPanel("Documentation",
+                          h4("Video documentation - Embedded from Youtube"),
+                          tags$iframe(src="https://www.youtube.com/embed/vySGuusQI3Y"),
+                          style="height:900px; width:900px"),
+                 
+                 tabPanel("Data Table with the underlying data",
+                          DT::dataTableOutput("tableDT"))
+                 
+                 )
+
+
+shinyApp(ui = ui, server = server)
+```
+
+
+
+## Copied script from professor for cross reference
+```{r}
+### Project Shiny
+
+library(shiny)
+library(DT)
+library(ggplot2)
+library(shinythemes)
+
+mydata = read.csv("course_proj_data.csv", header = T, sep = ";")
+
+attach(mydata)
+
+server = function(input, output, session){
+ 
+  # table for the Data table tab
+ 
+  output$tableDT <- DT::renderDataTable(DT::datatable(mydata) %>%
+                                          formatCurrency("MarketCap.in.M", "$", digits = 0) %>%
+                                          formatStyle("Symbol", color = "grey") %>%
+                                          formatStyle(c("G3", "G2", "G1"),
+                                                      backgroundColor = "lightblue"))
+ 
+ 
+  weighted.mydata = reactive(
+    cbind(mydata,
+          points = input$w1 * `G1` + input$w2 * `G2` + input$w3 * `G3`)
+  )
+ 
+ 
+  output$scat = renderPlot({
+    ggplot(weighted.mydata(), aes(points, MarketCap.in.M)) +
+    geom_point() + geom_smooth(method = "lm") +
+    xlab("Your Calculated Score") + ylab("Market Capitalization in Million USD")
+  })
+ 
+ 
+  mydata.new = reactive({
+    
+    user_brush <- input$user_brush
+    mysel <- brushedPoints(weighted.mydata(), user_brush)
+    return(mysel)
+    
+  })
+ 
+ 
+  output$table = DT::renderDataTable(DT::datatable(mydata.new()))
+ 
+  output$mydownload = downloadHandler(
+    filename = "selected_miners.csv",
+    content = function(file) {
+      write.csv(mydata.new(), file)})
+ 
+ 
+}
+
+ui = navbarPage(theme = shinytheme("sandstone"), title = h3("The Mining Stock Scale"),
+                tabPanel(
+  ("Adjust your Mining Stocks"),
+ wellPanel(
+  sliderInput(inputId = "w1",
+              label = "Weight on Grade 1",
+              value = 7, min = 0, max = 20),
+  sliderInput(inputId = "w2",
+              label = "Weight on Grade 2",
+              value = 2, min = 0, max = 20),
+  sliderInput(inputId = "w3",
+              label = "Weight on Grade 3",
+              value = 0.6, min = 0, max = 6, step = 0.2)
+  ),
+  plotOutput("scat", brush = "user_brush"),
+  DT::dataTableOutput("table"),
+  downloadButton(outputId = "mydownload", label = "Download Table")
+),
+
+tabPanel("Documentation",
+         h4("Video documentation - Embedded from Youtube"),
+         tags$iframe(style="height:700px; width:100%",
+                  src="https://www.youtube.com/embed/vySGuusQI3Y")
+         ),
+         
+tabPanel("Data Table with the underlying Data",
+         DT::dataTableOutput("tableDT"))
+
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
