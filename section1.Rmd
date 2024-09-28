@@ -1,0 +1,55 @@
+---
+title: "Section 1: Course Introduction"
+author: "Robet Phavong"
+date: "2024-09-27"
+output: html_document
+---
+
+# The Basic Shiny Template
+## A basic shiny app: All Shiny apps has the same basic script structure seen below
+```{r}
+library(shiny)
+
+# Basic Shiny structure
+## 'server' part: a function consisting of 'input', 'output', and 'session' arguments. Specifies the calculations performed in the app. R and all required packages need to be installed. 
+
+## 'input': interactive part/widget
+## 'output': calculation in the server, the result is sent to the 'ui' where it is displayed
+## 'session': session information, for apps lacking in reactivity 'session' can be omitted
+server = function(input, output, session) {} # server
+
+## 'ui' (user interface): layout and content (both static and interactive)
+ui = basicPage("our first basic app") # user interface
+
+## 'shinyApp': brings the components ('server' and 'ui') together and launches the app
+shinyApp(ui = ui, server = server) # app launch
+```
+
+
+## Scripting naming convention
+### Proper script naming convention is required if app is deployed onto a server
+### Mono script:
+#### 'server' + 'ui' in the same R script
+#### app.R
+#### suitable for short, standard scripts
+### Double script:
+#### server.R
+#### ui.R
+#### 'the old way' - suitable for large scripts
+### Local files can be named whatever you want
+### Rename local files when they are ready for deployment (app.R or server.R + ui.R)
+
+
+
+# The Input Widget Gallery - Tools to Enable User Input
+## Existing/Collection of R Shiny widgets with template codes
+## Can be explored in R Shiny widget gallery
+
+# The Link List
+## Online Documentation and useful supplemenatary materials
+
+
+
+
+
+
